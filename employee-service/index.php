@@ -1,3 +1,7 @@
+<?php
+session_start(); // ВСЕГДА первая строка
+?>
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>

@@ -1,11 +1,31 @@
-<?php require_once 'config/db.php'; ?>
+<?php
+
+require_once 'config/db.php';
+
+// Получаем сообщение из сессии (успех/ошибка)
+$message = $_SESSION['message'] ?? '';
+unset($_SESSION['message']);
+
+// Восстанавливаем данные формы при ошибке
+$form_data = $_SESSION['form_data'] ?? [];
+unset($_SESSION['form_data']);
+$errors = $_SESSION['form_errors'] ?? [];
+unset($_SESSION['form_errors']);
+?>
 
 <!-- Кнопки действий -->
 <div class="mb-4 d-flex gap-2">
     <a href="?page=employees&add=1" class="btn btn-success btn-sm">+ Добавить сотрудника</a>
-    <a href="?page=positions&action=add" class="btn btn-outline-primary btn-sm">+ Добавить должность</a>
-    <a href="?page=departments&action=add" class="btn btn-outline-primary btn-sm">+ Добавить отдел</a>
+    <a href="?page=positions&add=1" class="btn btn-outline-primary btn-sm">+ Добавить должность</a>
+    <a href="?page=departments&add=1" class="btn btn-outline-primary btn-sm">+ Добавить отдел</a>
 </div>
+
+<!-- Вывод уведомления -->
+<?php if ($message): ?>
+    <div class="alert <?= strpos($message, 'успешно') !== false || strpos($message, 'удалён') !== false ? 'alert-success' : 'alert-danger' ?>">
+        <?= htmlspecialchars($message) ?>
+    </div>
+<?php endif; ?>
 
 <!-- Форма добавления -->
 <?php if (isset($_GET['add'])): ?>
@@ -13,8 +33,14 @@
     <div class="card-header">Добавить сотрудника</div>
     <div class="card-body">
         <?php 
-        $data = ['first_name' => '', 'last_name' => '', 'email' => '', 'birth_date' => '', 'position_id' => '', 'department_id' => ''];
-        $errors = [];
+        $data = [
+            'first_name' => $form_data['first_name'] ?? '',
+            'last_name' => $form_data['last_name'] ?? '',
+            'email' => $form_data['email'] ?? '',
+            'birth_date' => $form_data['birth_date'] ?? '',
+            'position_id' => $form_data['position_id'] ?? '',
+            'department_id' => $form_data['department_id'] ?? ''
+        ];
         ?>
         <form method="post">
             <input type="hidden" name="create_employee" value="1">
@@ -39,7 +65,8 @@
         <div class="col-md-3">
             <select name="department_id" class="form-select">
                 <option value="">Все отделы</option>
-                <?php $departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetchAll();
+                <?php
+                $departments = $pdo->query("SELECT * FROM departments ORDER BY name")->fetchAll();
                 foreach ($departments as $d): ?>
                     <option value="<?= $d['id'] ?>" <?= ($d['id'] == ($_GET['department_id'] ?? '')) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($d['name']) ?>
@@ -50,7 +77,8 @@
         <div class="col-md-3">
             <select name="position_id" class="form-select">
                 <option value="">Все должности</option>
-                <?php $positions = $pdo->query("SELECT * FROM positions ORDER BY name")->fetchAll();
+                <?php
+                $positions = $pdo->query("SELECT * FROM positions ORDER BY name")->fetchAll();
                 foreach ($positions as $p): ?>
                     <option value="<?= $p['id'] ?>" <?= ($p['id'] == ($_GET['position_id'] ?? '')) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($p['name']) ?>
@@ -151,35 +179,40 @@
     $stmt->execute([$id]);
     $employee = $stmt->fetch();
 
-    if ($employee):
-        $data = $employee;
-        $errors = [];
-    ?>
+    if ($employee): ?>
         <div class="card mt-4 border-warning">
             <div class="card-header bg-warning text-dark">Редактировать или удалить сотрудника</div>
             <div class="card-body">
                 <form method="post" onsubmit="return confirm('Сохранить изменения?')">
                     <input type="hidden" name="update_employee" value="1">
                     <input type="hidden" name="id" value="<?= $employee['id'] ?>">
-                    <?php include __DIR__ . '/partials/employee_form.php'; ?>
+                    <?php 
+                    $data = $employee;
+                    $errors = $_SESSION['form_errors'] ?? [];
+                    unset($_SESSION['form_errors']);
+                    include __DIR__ . '/partials/employee_form.php'; 
+                    ?>
                     <div class="mt-3">
                         <button type="submit" class="btn btn-primary">Редактировать</button>
                         <a href="?page=employees" class="btn btn-secondary">Отмена</a>
                     </div>
                 </form>
 
-                <form method="post" onsubmit="return confirm('Удалить этого сотрудника?')">
+                <form method="post" onsubmit="return confirm('Удалить этого сотрудника? Это действие нельзя отменить.')">
                     <input type="hidden" name="delete_employee" value="1">
                     <input type="hidden" name="id" value="<?= $employee['id'] ?>">
                     <button type="submit" class="btn btn-danger">Удалить</button>
                 </form>
             </div>
         </div>
+    <?php else: ?>
+        <div class="alert alert-danger">Сотрудник не найден.</div>
     <?php endif; ?>
 <?php endif; ?>
 
 <!-- Обработка форм -->
 <?php
+// Добавление сотрудника
 if (isset($_POST['create_employee'])) {
     $data = [
         'first_name' => trim($_POST['first_name'] ?? ''),
@@ -191,27 +224,68 @@ if (isset($_POST['create_employee'])) {
     ];
     $errors = [];
 
-    if (empty($data['first_name'])) $errors['first_name'] = 'Имя обязательно.';
-    if (empty($data['last_name'])) $errors['last_name'] = 'Фамилия обязательна.';
-    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Email должен быть корректным.';
+    // Проверка обязательных полей
+    if (empty($data['first_name'])) {
+        $errors['first_name'] = 'Имя обязательно.';
+    }
+    if (empty($data['last_name'])) {
+        $errors['last_name'] = 'Фамилия обязательна.';
+    }
+    if (empty($data['email'])) {
+        $errors['email'] = 'Email обязателен.';
+    } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Введите корректный email (например: user@example.com).';
     } else {
         $stmt = $pdo->prepare("SELECT id FROM employees WHERE email = ?");
         $stmt->execute([$data['email']]);
-        if ($stmt->fetch()) $errors['email'] = 'Email уже используется.';
+        if ($stmt->fetch()) {
+            $errors['email'] = 'Сотрудник с таким email уже существует.';
+        }
     }
-    if (empty($data['birth_date']) || new DateTime($data['birth_date']) > new DateTime()) {
-        $errors['birth_date'] = 'Дата рождения обязательна и не может быть в будущем.';
+    if (empty($data['birth_date'])) {
+        $errors['birth_date'] = 'Дата рождения обязательна.';
+    } else {
+        $birth_date = new DateTime($data['birth_date']);
+        $today = new DateTime();
+        if ($birth_date > $today) {
+            $errors['birth_date'] = 'Дата рождения не может быть в будущем.';
+        }
+    }
+    if (empty($data['position_id']) || !is_numeric($data['position_id'])) {
+        $errors['position_id'] = 'Выберите корректную должность.';
+    } else {
+        $stmt = $pdo->prepare("SELECT id FROM positions WHERE id = ?");
+        $stmt->execute([(int)$data['position_id']]);
+        if (!$stmt->fetch()) {
+            $errors['position_id'] = 'Указанная должность не существует.';
+        }
+    }
+    if (empty($data['department_id']) || !is_numeric($data['department_id'])) {
+        $errors['department_id'] = 'Выберите корректный отдел.';
+    } else {
+        $stmt = $pdo->prepare("SELECT id FROM departments WHERE id = ?");
+        $stmt->execute([(int)$data['department_id']]);
+        if (!$stmt->fetch()) {
+            $errors['department_id'] = 'Указанный отдел не существует.';
+        }
     }
 
     if (empty($errors)) {
         $pdo->prepare("INSERT INTO employees (first_name, last_name, email, birth_date, position_id, department_id) VALUES (?, ?, ?, ?, ?, ?)")
             ->execute([$data['first_name'], $data['last_name'], $data['email'], $data['birth_date'], $data['position_id'], $data['department_id']]);
+        $_SESSION['message'] = 'Сотрудник успешно добавлен.';
         header("Location: ?page=employees");
+        exit;
+    } else {
+        $_SESSION['message'] = 'Исправьте ошибки в форме.';
+        $_SESSION['form_data'] = $data;
+        $_SESSION['form_errors'] = $errors;
+        header("Location: ?page=employees&add=1");
         exit;
     }
 }
 
+// Обновление сотрудника
 if (isset($_POST['update_employee'])) {
     $id = (int)$_POST['id'];
     $data = [
@@ -224,33 +298,76 @@ if (isset($_POST['update_employee'])) {
     ];
     $errors = [];
 
-    if (empty($data['first_name'])) $errors['first_name'] = 'Имя обязательно.';
-    if (empty($data['last_name'])) $errors['last_name'] = 'Фамилия обязательна.';
-    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Email должен быть корректным.';
+    if (empty($data['first_name'])) {
+        $errors['first_name'] = 'Имя обязательно.';
+    }
+    if (empty($data['last_name'])) {
+        $errors['last_name'] = 'Фамилия обязательна.';
+    }
+    if (empty($data['email'])) {
+        $errors['email'] = 'Email обязателен.';
+    } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors['email'] = 'Введите корректный email (например: user@example.com).';
     } else {
         $stmt = $pdo->prepare("SELECT id FROM employees WHERE email = ? AND id != ?");
         $stmt->execute([$data['email'], $id]);
-        if ($stmt->fetch()) $errors['email'] = 'Email уже используется.';
+        if ($stmt->fetch()) {
+            $errors['email'] = 'Сотрудник с таким email уже существует.';
+        }
     }
-    if (empty($data['birth_date']) || new DateTime($data['birth_date']) > new DateTime()) {
-        $errors['birth_date'] = 'Дата рождения обязательна и не может быть в будущем.';
+    if (empty($data['birth_date'])) {
+        $errors['birth_date'] = 'Дата рождения обязательна.';
+    } else {
+        $birth_date = new DateTime($data['birth_date']);
+        $today = new DateTime();
+        if ($birth_date > $today) {
+            $errors['birth_date'] = 'Дата рождения не может быть в будущем.';
+        }
+    }
+    if (empty($data['position_id']) || !is_numeric($data['position_id'])) {
+        $errors['position_id'] = 'Выберите корректную должность.';
+    } else {
+        $stmt = $pdo->prepare("SELECT id FROM positions WHERE id = ?");
+        $stmt->execute([(int)$data['position_id']]);
+        if (!$stmt->fetch()) {
+            $errors['position_id'] = 'Указанная должность не существует.';
+        }
+    }
+    if (empty($data['department_id']) || !is_numeric($data['department_id'])) {
+        $errors['department_id'] = 'Выберите корректный отдел.';
+    } else {
+        $stmt = $pdo->prepare("SELECT id FROM departments WHERE id = ?");
+        $stmt->execute([(int)$data['department_id']]);
+        if (!$stmt->fetch()) {
+            $errors['department_id'] = 'Указанный отдел не существует.';
+        }
     }
 
     if (empty($errors)) {
         $pdo->prepare("UPDATE employees SET first_name=?, last_name=?, email=?, birth_date=?, position_id=?, department_id=? WHERE id=?")
             ->execute([$data['first_name'], $data['last_name'], $data['email'], $data['birth_date'], $data['position_id'], $data['department_id'], $id]);
+        $_SESSION['message'] = 'Сотрудник успешно обновлён.';
         header("Location: ?page=employees");
+        exit;
+    } else {
+        $_SESSION['message'] = 'Исправьте ошибки в форме.';
+        $_SESSION['form_data'] = $data;
+        $_SESSION['form_errors'] = $errors;
+        header("Location: ?page=employees&edit_id=$id");
         exit;
     }
 }
 
+// Удаление сотрудника
 if (isset($_POST['delete_employee'])) {
     $id = (int)$_POST['id'];
     try {
         $stmt = $pdo->prepare("DELETE FROM employees WHERE id = ?");
         $stmt->execute([$id]);
-    } catch (PDOException $e) {}
+        $_SESSION['message'] = 'Сотрудник успешно удалён.';
+    } catch (PDOException $e) {
+        $_SESSION['message'] = 'Ошибка при удалении: ' . $e->getMessage();
+    }
     header("Location: ?page=employees");
     exit;
 }
