@@ -1,9 +1,4 @@
 <?php
-// Запрещаем прямой доступ
-if (!defined('ROOT')) {
-    define('ROOT', dirname(__DIR__));
-}
-
 // Подключаем БД
 require_once 'config/db.php';
 
@@ -153,8 +148,12 @@ unset($_SESSION['message']);
 // Восстанавливаем данные формы при ошибке
 $form_data = $_SESSION['form_data'] ?? [];
 unset($_SESSION['form_data']);
-$errors = $_SESSION['form_errors'] ?? [];
+$form_errors = $_SESSION['form_errors'] ?? [];
 unset($_SESSION['form_errors']);
+
+// Инициализируем $data и $errors
+$data = $form_data;
+$errors = $form_errors;
 ?>
 
 <!-- Кнопки действий -->
@@ -176,16 +175,6 @@ unset($_SESSION['form_errors']);
 <div class="card mb-4">
     <div class="card-header">Добавить сотрудника</div>
     <div class="card-body">
-        <?php 
-        $data = [
-            'first_name' => $form_data['first_name'] ?? '',
-            'last_name' => $form_data['last_name'] ?? '',
-            'email' => $form_data['email'] ?? '',
-            'birth_date' => $form_data['birth_date'] ?? '',
-            'position_id' => $form_data['position_id'] ?? '',
-            'department_id' => $form_data['department_id'] ?? ''
-        ];
-        ?>
         <form method="post">
             <input type="hidden" name="create_employee" value="1">
             <?php include __DIR__ . '/partials/employee_form.php'; ?>
@@ -323,18 +312,18 @@ unset($_SESSION['form_errors']);
     $stmt->execute([$id]);
     $employee = $stmt->fetch();
 
-    if ($employee): ?>
+    if ($employee):
+        // При редактировании используем данные из БД, но если были ошибки — из сессии
+        $data = $_SESSION['form_data'] ?? $employee;
+        $errors = $_SESSION['form_errors'] ?? [];
+    ?>
         <div class="card mt-4 border-warning">
             <div class="card-header bg-warning text-dark">Редактировать или удалить сотрудника</div>
             <div class="card-body">
                 <form method="post" onsubmit="return confirm('Сохранить изменения?')">
                     <input type="hidden" name="update_employee" value="1">
                     <input type="hidden" name="id" value="<?= $employee['id'] ?>">
-                    <?php 
-                    $data = $employee;
-                    $errors = $_SESSION['form_errors'] ?? [];
-                    include __DIR__ . '/partials/employee_form.php'; 
-                    ?>
+                    <?php include __DIR__ . '/partials/employee_form.php'; ?>
                     <div class="mt-3">
                         <button type="submit" class="btn btn-primary">Редактировать</button>
                         <a href="?page=employees" class="btn btn-secondary">Отмена</a>
