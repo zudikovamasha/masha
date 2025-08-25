@@ -15,13 +15,14 @@
         <?php 
         $data = ['first_name' => '', 'last_name' => '', 'email' => '', 'birth_date' => '', 'position_id' => '', 'department_id' => ''];
         $errors = [];
-        include 'partials/employee_form.php'; 
         ?>
         <form method="post">
             <input type="hidden" name="create_employee" value="1">
-            <?php include 'partials/employee_form.php'; ?>
-            <button type="submit" class="btn btn-success">Сохранить</button>
-            <a href="?page=employees" class="btn btn-secondary">Отмена</a>
+            <?php include __DIR__ . '/partials/employee_form.php'; ?>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-success">Сохранить</button>
+                <a href="?page=employees" class="btn btn-secondary">Отмена</a>
+            </div>
         </form>
     </div>
 </div>
@@ -150,16 +151,21 @@
     $stmt->execute([$id]);
     $employee = $stmt->fetch();
 
-    if ($employee): ?>
+    if ($employee):
+        $data = $employee;
+        $errors = [];
+    ?>
         <div class="card mt-4 border-warning">
             <div class="card-header bg-warning text-dark">Редактировать или удалить сотрудника</div>
             <div class="card-body">
                 <form method="post" onsubmit="return confirm('Сохранить изменения?')">
                     <input type="hidden" name="update_employee" value="1">
                     <input type="hidden" name="id" value="<?= $employee['id'] ?>">
-                    <?php $data = $employee; $errors = []; include 'partials/employee_form.php'; ?>
-                    <button type="submit" class="btn btn-primary">Редактировать</button>
-                    <a href="?page=employees" class="btn btn-secondary">Отмена</a>
+                    <?php include __DIR__ . '/partials/employee_form.php'; ?>
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">Редактировать</button>
+                        <a href="?page=employees" class="btn btn-secondary">Отмена</a>
+                    </div>
                 </form>
 
                 <form method="post" onsubmit="return confirm('Удалить этого сотрудника?')">
@@ -169,10 +175,8 @@
                 </form>
             </div>
         </div>
-    <?php else: ?>
-        <div class="alert alert-danger">Сотрудник не найден.</div>
-    <?php endif;
-endif; ?>
+    <?php endif; ?>
+<?php endif; ?>
 
 <!-- Обработка форм -->
 <?php
