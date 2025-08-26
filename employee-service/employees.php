@@ -235,35 +235,39 @@ unset($_SESSION['form_errors']);
 <div class="mb-3">
     <div class="btn-group btn-group-sm">
         <?php
-        // Функция для генерации URL с сохранением всех параметров
-        function sortUrl($field, $current_order) {
+        // Функция для генерации ссылки сортировки
+        function sortLink($field, $label, $current_order) {
             $params = $_GET;
             $params['page'] = 'employees';
+            $current_sort = $_GET['sort'] ?? 'last_name';
+            $current_order = strtoupper($_GET['order'] ?? 'ASC');
+
+            if ($current_sort === $field) {
+                // Переключаем направление
+                $new_order = $current_order === 'ASC' ? 'DESC' : 'ASC';
+            } else {
+                // Новое поле — сортируем по возрастанию
+                $new_order = 'ASC';
+            }
+
             $params['sort'] = $field;
-            $params['order'] = ($params['sort'] ?? '') === $field && $current_order === 'ASC' ? 'DESC' : 'ASC';
-            return '?' . http_build_query($params);
+            $params['order'] = $new_order;
+
+            $icon = '';
+            if ($current_sort === $field) {
+                $icon = $new_order === 'ASC' ? ' ↑' : ' ↓';
+            }
+
+            $url = '?' . http_build_query($params);
+            return "<a href='$url' class='btn btn-outline-secondary'>$label$icon</a>";
         }
         ?>
-        <a href="<?= sortUrl('last_name', 'ASC') ?>" class="btn btn-outline-secondary">
-            Фамилия
-            <?php if ($_GET['sort'] ?? '' === 'last_name'): ?>
-                (<?= ($_GET['order'] ?? 'ASC') === 'ASC' ? '↑' : '↓' ?>)
-            <?php endif; ?>
-        </a>
-        <a href="<?= sortUrl('birth_date', 'ASC') ?>" class="btn btn-outline-secondary">
-            Дата рождения
-            <?php if ($_GET['sort'] ?? '' === 'birth_date'): ?>
-                (<?= ($_GET['order'] ?? 'ASC') === 'ASC' ? '↑' : '↓' ?>)
-            <?php endif; ?>
-        </a>
-        <a href="<?= sortUrl('created_at', 'ASC') ?>" class="btn btn-outline-secondary">
-            Дата создания
-            <?php if ($_GET['sort'] ?? '' === 'created_at'): ?>
-                (<?= ($_GET['order'] ?? 'ASC') === 'ASC' ? '↑' : '↓' ?>)
-            <?php endif; ?>
-        </a>
+        <?= sortLink('last_name', 'Фамилия', 'ASC') ?>
+        <?= sortLink('birth_date', 'Дата рождения', 'ASC') ?>
+        <?= sortLink('created_at', 'Дата создания', 'ASC') ?>
     </div>
 </div>
+
 
 <!-- Таблица сотрудников -->
 <table class="table table-striped table-hover">
