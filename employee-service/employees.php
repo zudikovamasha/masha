@@ -1,5 +1,4 @@
 <?php
-// Подключаем БД
 require_once 'config/db.php';
 
 // === ОБРАБОТКА ФОРМ — ДО ЛЮБОГО ВЫВОДА ===
@@ -150,10 +149,6 @@ $form_data = $_SESSION['form_data'] ?? [];
 unset($_SESSION['form_data']);
 $form_errors = $_SESSION['form_errors'] ?? [];
 unset($_SESSION['form_errors']);
-
-// Инициализируем $data и $errors
-$data = $form_data;
-$errors = $form_errors;
 ?>
 
 <!-- Кнопки действий -->
@@ -175,6 +170,17 @@ $errors = $form_errors;
 <div class="card mb-4">
     <div class="card-header">Добавить сотрудника</div>
     <div class="card-body">
+        <?php 
+        $data = [
+            'first_name' => $form_data['first_name'] ?? '',
+            'last_name' => $form_data['last_name'] ?? '',
+            'email' => $form_data['email'] ?? '',
+            'birth_date' => $form_data['birth_date'] ?? '',
+            'position_id' => $form_data['position_id'] ?? '',
+            'department_id' => $form_data['department_id'] ?? ''
+        ];
+        $errors = $form_errors;
+        ?>
         <form method="post">
             <input type="hidden" name="create_employee" value="1">
             <?php include __DIR__ . '/partials/employee_form.php'; ?>
@@ -228,12 +234,34 @@ $errors = $form_errors;
 <!-- Сортировка -->
 <div class="mb-3">
     <div class="btn-group btn-group-sm">
-        <a href="?page=employees&sort=last_name&order=<?= ($_GET['sort'] ?? '') === 'last_name' && ($_GET['order'] ?? '') === 'ASC' ? 'DESC' : 'ASC' ?>"
-           class="btn btn-outline-secondary">Фамилия</a>
-        <a href="?page=employees&sort=birth_date&order=<?= ($_GET['sort'] ?? '') === 'birth_date' && ($_GET['order'] ?? '') === 'ASC' ? 'DESC' : 'ASC' ?>"
-           class="btn btn-outline-secondary">Дата рождения</a>
-        <a href="?page=employees&sort=created_at&order=<?= ($_GET['sort'] ?? '') === 'created_at' && ($_GET['order'] ?? '') === 'ASC' ? 'DESC' : 'ASC' ?>"
-           class="btn btn-outline-secondary">Дата создания</a>
+        <?php
+        // Функция для генерации URL с сохранением всех параметров
+        function sortUrl($field, $current_order) {
+            $params = $_GET;
+            $params['page'] = 'employees';
+            $params['sort'] = $field;
+            $params['order'] = ($params['sort'] ?? '') === $field && $current_order === 'ASC' ? 'DESC' : 'ASC';
+            return '?' . http_build_query($params);
+        }
+        ?>
+        <a href="<?= sortUrl('last_name', 'ASC') ?>" class="btn btn-outline-secondary">
+            Фамилия
+            <?php if ($_GET['sort'] ?? '' === 'last_name'): ?>
+                (<?= ($_GET['order'] ?? 'ASC') === 'ASC' ? '↑' : '↓' ?>)
+            <?php endif; ?>
+        </a>
+        <a href="<?= sortUrl('birth_date', 'ASC') ?>" class="btn btn-outline-secondary">
+            Дата рождения
+            <?php if ($_GET['sort'] ?? '' === 'birth_date'): ?>
+                (<?= ($_GET['order'] ?? 'ASC') === 'ASC' ? '↑' : '↓' ?>)
+            <?php endif; ?>
+        </a>
+        <a href="<?= sortUrl('created_at', 'ASC') ?>" class="btn btn-outline-secondary">
+            Дата создания
+            <?php if ($_GET['sort'] ?? '' === 'created_at'): ?>
+                (<?= ($_GET['order'] ?? 'ASC') === 'ASC' ? '↑' : '↓' ?>)
+            <?php endif; ?>
+        </a>
     </div>
 </div>
 
@@ -313,7 +341,7 @@ $errors = $form_errors;
     $employee = $stmt->fetch();
 
     if ($employee):
-        // При редактировании используем данные из БД, но если были ошибки — из сессии
+        // Восстанавливаем данные и ошибки
         $data = $_SESSION['form_data'] ?? $employee;
         $errors = $_SESSION['form_errors'] ?? [];
     ?>
