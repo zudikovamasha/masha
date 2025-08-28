@@ -34,15 +34,15 @@ session_start(); // ВСЕГДА первая строка
         } else {
              echo '
              <div id="error-alert" class="alert alert-danger alert-dismissible fade show" style="cursor: pointer;">Страница не найдена.</div>
-
-            <script>
+             
+             <script>
             // Дожидаемся, пока страница загрузится
             document.addEventListener("DOMContentLoaded", function() {
             const alertEl = document.getElementById("error-alert");
             if (alertEl) {
                 alertEl.addEventListener("click", function() {
-                    // Используем Bootstrap API для плавного закрытия
-                    bootstrap.Alert.getOrCreateInstance(this).close();
+                // Используем Bootstrap API для плавного закрытия
+                bootstrap.Alert.getOrCreateInstance(this).close();
                 });
             }
             });
