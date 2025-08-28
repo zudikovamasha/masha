@@ -1,0 +1,22 @@
+CREATE TABLE classes (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
+CREATE TABLE study_program (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+);
+
+CREATE TABLE students (
+    id SERIAL PRIMARY KEY,
+    fio_kids VARCHAR(50) NOT NULL,
+	years INTEGER NOT NULL,
+	classes_id INTEGER REFERENCES classes(id) ON DELETE RESTRICT,
+    study_program_id INTEGER REFERENCES study_program(id) ON DELETE RESTRICT,
+	fio_parent VARCHAR(50) NOT NULL,
+	phone VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    waitings VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
