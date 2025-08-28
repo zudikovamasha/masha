@@ -1,6 +1,17 @@
 <?php
 require_once 'config/db.php';
 
+function debug_log($data, $label = 'DEBUG', $file = 'd:/tracerlog/debug.log') {
+    $time = date('Y-m-d H:i:s');
+    $log = sprintf(
+        "[%s] %s: %s\n\n",
+        $time,
+        $label,
+        print_r($data, true)
+    );
+    file_put_contents($file, $log, FILE_APPEND | LOCK_EX);
+}
+
 $message = $_SESSION['message'] ?? '';
 unset($_SESSION['message']);
 ?>
@@ -58,7 +69,8 @@ unset($_SESSION['message']);
     $id = (int)$_GET['edit_id'];
     $stmt = $pdo->prepare("SELECT * FROM study_program WHERE id = ?");
     $stmt->execute([$id]);
-    $group = $stmt->fetch();
+    $program = $stmt->fetch();
+    // debug_log($program, 'program');
 
     if ($program): ?>
         <div class="card mt-4">

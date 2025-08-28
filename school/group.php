@@ -1,6 +1,17 @@
 <?php
 require_once 'config/db.php';
 
+function debug_log($data, $label = 'DEBUG', $file = 'd:/tracerlog/debug.log') {
+    $time = date('Y-m-d H:i:s');
+    $log = sprintf(
+        "[%s] %s: %s\n\n",
+        $time,
+        $label,
+        print_r($data, true)
+    );
+    file_put_contents($file, $log, FILE_APPEND | LOCK_EX);
+}
+
 $message = $_SESSION['message'] ?? '';
 unset($_SESSION['message']);
 ?>
@@ -59,6 +70,7 @@ unset($_SESSION['message']);
     $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
     $stmt->execute([$id]);
     $group = $stmt->fetch();
+    // debug_log($group, 'group');
 
     if ($group): ?>
         <div class="card mt-4">
