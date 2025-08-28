@@ -7,7 +7,7 @@
 <?php endif; ?>
 
 <div class="mb-3">
-    <label>Название *</label>
+    <label for="name">Название программы обучения *</label>
     <input type="text" name="name" class="form-control <?= isset($errors['name']) ? 'is-invalid' : '' ?>"
            value="<?= htmlspecialchars($data['name'] ?? '') ?>" required>
     <?php if (isset($errors['name'])): ?>
