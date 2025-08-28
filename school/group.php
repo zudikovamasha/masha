@@ -17,7 +17,7 @@ unset($_SESSION['message']);
 
 <?php if (isset($_GET['add'])): ?>
 <div class="card mb-4">
-    <div class="card-header">Добавить группу</div>
+    <div class="card-header bg-success text-light">Добавить группу</div>
     <div class="card-body">
         <?php $data = ['name' => '']; $errors = []; ?>
         <form method="post">
@@ -44,7 +44,7 @@ unset($_SESSION['message']);
             <?php foreach ($group as $g): ?>
                 <tr>
                     <td>
-                        <a href="?page=group$group&edit_id=<?= $g['id'] ?>" class="text-decoration-none text-primary fw-bold">
+                        <a href="?page=group&edit_id=<?= $g['id'] ?>" class="text-decoration-none text-primary fw-bold">
                             <?= htmlspecialchars($g['name']) ?>
                         </a>
                     </td>
@@ -61,15 +61,15 @@ unset($_SESSION['message']);
     $group = $stmt->fetch();
 
     if ($group): ?>
-        <div class="card mt-4 border-warning">
-            <div class="card-header bg-warning text-dark">Редактировать или удалить группу</div>
+        <div class="card mt-4">
+            <div class="card-header bg-success text-light">Редактировать или удалить группу</div>
             <div class="card-body">
                 <form method="post" onsubmit="return confirm('Сохранить изменения?')">
                     <input type="hidden" name="update_group" value="1">
                     <input type="hidden" name="id" value="<?= $group['id'] ?>">
                     <?php $data = $group; $errors = []; include __DIR__ . '/forms/group_form.php'; ?>
                     <button type="submit" class="btn btn-primary">Сохранить</button>
-                    <a href="?page=group$group" class="btn btn-secondary">Отмена</a>
+                    <a href="?page=group" class="btn btn-secondary">Отмена</a>
                 </form>
 
                 <form method="post" onsubmit="return confirm('Удалить группу? Это действие нельзя отменить.')">
@@ -97,7 +97,7 @@ if (isset($_POST['create_group'])) {
             $_SESSION['message'] = 'Группа успешно добавлена.';
         }
     }
-    header("Location: ?page=group$group");
+    header("Location: ?page=group");
     exit;
 }
 
@@ -116,7 +116,7 @@ if (isset($_POST['update_group'])) {
             $_SESSION['message'] = 'Группа успешно обновлена.';
         }
     }
-    header("Location: ?page=group$group");
+    header("Location: ?page=group");
     exit;
 }
 
@@ -136,7 +136,7 @@ if (isset($_POST['delete_group'])) {
             $_SESSION['message'] = "Ошибка удаления: " . $e->getMessage();
         }
     }
-    header("Location: ?page=group$group");
+    header("Location: ?page=group");
     exit;
 }
 ?>
