@@ -44,7 +44,7 @@ unset($_SESSION['message']);
             <?php foreach ($group as $g): ?>
                 <tr>
                     <td>
-                        <a href="?page=group&edit_id=<?= $g['id'] ?>" class="text-decoration-none text-primary fw-bold">
+                        <a href="?page=group&edit_id=<?= $g['id'] ?>" class="text-decoration-none text-success fw-bold">
                             <?= htmlspecialchars($g['name']) ?>
                         </a>
                     </td>
@@ -122,7 +122,7 @@ if (isset($_POST['update_group'])) {
 
 if (isset($_POST['delete_group'])) {
     $id = (int)$_POST['id'];
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM employees WHERE position_id = ?");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE classes_id = ?");
     $stmt->execute([$id]);
     $count = $stmt->fetchColumn();
 
