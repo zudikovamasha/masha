@@ -358,7 +358,7 @@ unset($_SESSION['form_errors']);
         $errors = $_SESSION['form_errors'] ?? [];
     ?>
         <div class="card mt-4 border-success">
-            <div class="card-header bg-warning text-dark">Редактировать или удалить сотрудника</div>
+            <div class="card-header bg-success text-light">Редактировать или удалить сотрудника</div>
             <div class="card-body">
                 <form method="post" onsubmit="return confirm('Сохранить изменения?')">
                     <input type="hidden" name="update_students" value="1">
