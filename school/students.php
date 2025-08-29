@@ -363,7 +363,7 @@ unset($_SESSION['form_errors']);
                 <form method="post" onsubmit="return confirm('Сохранить изменения?')">
                     <input type="hidden" name="update_students" value="1">
                     <input type="hidden" name="id" value="<?= $students['id'] ?>">
-                    <?php include __DIR__ . '/foms/students_form.php'; ?>
+                    <?php include __DIR__ . '/forms/students_form.php'; ?>
                     <div class="mt-3">
                         <button type="submit" class="btn btn-primary">Сохранить</button>
                         <a href="?page=students" class="btn btn-secondary">Отмена</a>
