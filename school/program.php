@@ -1,6 +1,63 @@
 <?php
 require_once 'config/db.php';
 
+if (isset($_POST['create_program'])) {
+    $name = trim($_POST['name']);
+    if (empty($name)) {
+        $_SESSION['message'] = 'Ошибка: введите название программы обучения.';
+    } else {
+        $stmt = $pdo->prepare("SELECT id FROM study_program WHERE name = ?");
+        $stmt->execute([$name]);
+        if ($stmt->fetch()) {
+            $_SESSION['message'] = 'Ошибка: программа обучения с таким названием уже существует.';
+        } else {
+            $pdo->prepare("INSERT INTO study_program (name) VALUES (?)")->execute([$name]);
+            $_SESSION['message'] = 'Программа обучения успешно добавлена.';
+        }
+    }
+    header("Location: ?page=program");
+    exit;
+}
+
+if (isset($_POST['update_program'])) {
+    $id = (int)$_POST['id'];
+    $name = trim($_POST['name']);
+    if (empty($name)) {
+        $_SESSION['message'] = 'Ошибка: введите название программы обучения.';
+    } else {
+        $stmt = $pdo->prepare("SELECT id FROM study_program WHERE name = ? AND id != ?");
+        $stmt->execute([$name, $id]);
+        if ($stmt->fetch()) {
+            $_SESSION['message'] = 'Ошибка: программа обучения с таким названием уже существует.';
+        } else {
+            $pdo->prepare("UPDATE study_program SET name = ? WHERE id = ?")->execute([$name, $id]);
+            $_SESSION['message'] = 'Программа обучения успешно обновлена.';
+        }
+    }
+    header("Location: ?page=program");
+    exit;
+}
+
+if (isset($_POST['delete_program'])) {
+    $id = (int)$_POST['id'];
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE study_program_id = ?");
+    $stmt->execute([$id]);
+    $count = $stmt->fetchColumn();
+
+    if ($count > 0) {
+        $_SESSION['message'] = "Нельзя удалить программу обучения: она используется в анкетах у $count учеников.";
+    } else {
+        try {
+            $pdo->prepare("DELETE FROM study_program WHERE id = ?")->execute([$id]);
+            $_SESSION['message'] = "Программу обучения успешно удалена.";
+        } catch (PDOException $e) {
+            $_SESSION['message'] = "Ошибка удаления: " . $e->getMessage();
+        }
+    }
+    header("Location: ?page=program");
+    exit;
+}
+
 $message = $_SESSION['message'] ?? '';
 unset($_SESSION['message']);
 ?>

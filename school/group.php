@@ -1,6 +1,63 @@
 <?php
 require_once 'config/db.php';
 
+if (isset($_POST['create_group'])) {
+    $name = trim($_POST['name']);
+    if (empty($name)) {
+        $_SESSION['message'] = 'Ошибка: введите название группы.';
+    } else {
+        $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+        $stmt->execute([$name]);
+        if ($stmt->fetch()) {
+            $_SESSION['message'] = 'Ошибка: группа с таким названием уже существует.';
+        } else {
+            $pdo->prepare("INSERT INTO classes (name) VALUES (?)")->execute([$name]);
+            $_SESSION['message'] = 'Группа успешно добавлена.';
+        }
+    }
+    header("Location: ?page=group");
+    exit;
+}
+
+if (isset($_POST['update_group'])) {
+    $id = (int)$_POST['id'];
+    $name = trim($_POST['name']);
+    if (empty($name)) {
+        $_SESSION['message'] = 'Ошибка: введите название группы.';
+    } else {
+        $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ? AND id != ?");
+        $stmt->execute([$name, $id]);
+        if ($stmt->fetch()) {
+            $_SESSION['message'] = 'Ошибка: группа с таким названием уже существует.';
+        } else {
+            $pdo->prepare("UPDATE classes SET name = ? WHERE id = ?")->execute([$name, $id]);
+            $_SESSION['message'] = 'Группа успешно обновлена.';
+        }
+    }
+    header("Location: ?page=group");
+    exit;
+}
+
+if (isset($_POST['delete_group'])) {
+    $id = (int)$_POST['id'];
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE classes_id = ?");
+    $stmt->execute([$id]);
+    $count = $stmt->fetchColumn();
+
+    if ($count > 0) {
+        $_SESSION['message'] = "Нельзя удалить группу: она используется в анкетах у $count учеников.";
+    } else {
+        try {
+            $pdo->prepare("DELETE FROM classes WHERE id = ?")->execute([$id]);
+            $_SESSION['message'] = "Группа успешно удалена.";
+        } catch (PDOException $e) {
+            $_SESSION['message'] = "Ошибка удаления: " . $e->getMessage();
+        }
+    }
+    header("Location: ?page=group");
+    exit;
+}
+
 $message = $_SESSION['message'] ?? '';
 unset($_SESSION['message']);
 ?>
@@ -81,62 +138,3 @@ unset($_SESSION['message']);
         </div>
     <?php endif; ?>
 <?php endif; ?>
-
-<?php
-if (isset($_POST['create_group'])) {
-    $name = trim($_POST['name']);
-    if (empty($name)) {
-        $_SESSION['message'] = 'Ошибка: введите название группы.';
-    } else {
-        $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
-        $stmt->execute([$name]);
-        if ($stmt->fetch()) {
-            $_SESSION['message'] = 'Ошибка: группа с таким названием уже существует.';
-        } else {
-            $pdo->prepare("INSERT INTO classes (name) VALUES (?)")->execute([$name]);
-            $_SESSION['message'] = 'Группа успешно добавлена.';
-        }
-    }
-    header("Location: ?page=group");
-    exit;
-}
-
-if (isset($_POST['update_group'])) {
-    $id = (int)$_POST['id'];
-    $name = trim($_POST['name']);
-    if (empty($name)) {
-        $_SESSION['message'] = 'Ошибка: введите название группы.';
-    } else {
-        $stmt = $pdo->prepare("SELECT id FROM classes WHERE name = ? AND id != ?");
-        $stmt->execute([$name, $id]);
-        if ($stmt->fetch()) {
-            $_SESSION['message'] = 'Ошибка: группа с таким названием уже существует.';
-        } else {
-            $pdo->prepare("UPDATE classes SET name = ? WHERE id = ?")->execute([$name, $id]);
-            $_SESSION['message'] = 'Группа успешно обновлена.';
-        }
-    }
-    header("Location: ?page=group");
-    exit;
-}
-
-if (isset($_POST['delete_group'])) {
-    $id = (int)$_POST['id'];
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE classes_id = ?");
-    $stmt->execute([$id]);
-    $count = $stmt->fetchColumn();
-
-    if ($count > 0) {
-        $_SESSION['message'] = "Нельзя удалить группу: она используется в анкетах у $count учеников.";
-    } else {
-        try {
-            $pdo->prepare("DELETE FROM classes WHERE id = ?")->execute([$id]);
-            $_SESSION['message'] = "Группа успешно удалена.";
-        } catch (PDOException $e) {
-            $_SESSION['message'] = "Ошибка удаления: " . $e->getMessage();
-        }
-    }
-    header("Location: ?page=group");
-    exit;
-}
-?>
