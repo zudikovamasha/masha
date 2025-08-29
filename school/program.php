@@ -67,7 +67,10 @@ unset($_SESSION['message']);
 </div>
 
 <?php if ($message): ?>
-    <div class="alert <?= strpos($message, 'успешно') !== false ? 'alert-success' : 'alert-danger' ?>">
+    <div class="alert <?= strpos($message, 'успешно') !== false ? 'alert-success' : 'alert-danger' ?>"
+        onclick="this.remove()"
+        style="cursor: pointer;"
+        role="alert">
         <?= htmlspecialchars($message) ?>
     </div>
 <?php endif; ?>
