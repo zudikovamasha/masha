@@ -3,7 +3,7 @@ require_once 'config/db.php';
 
 // === ОБРАБОТКА ФОРМ — ДО ЛЮБОГО ВЫВОДА ===
 
-// Добавление сотрудника
+// Добавление ученика
 if (isset($_POST['create_students'])) {
     $data = [
         'fio_kids' => trim($_POST['fio_kids'] ?? ''),
@@ -50,18 +50,18 @@ if (isset($_POST['create_students'])) {
         $pdo->prepare("INSERT INTO students (fio_kids, years, classes_id, study_program_id, fio_parent, phone, email, waitings) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
             ->execute([$data['fio_kids'], $data['years'], $data['classes_id'], $data['study_program_id'], $data['fio_parent'], $data['phone'], $data['email'], $data['waitings']]);
         $_SESSION['message'] = 'Ученик успешно добавлен.';
-        header("Location: ?page=students");
+        header("Location: ?page=students" . ($_GET['search'] ?? '') ? '&' . http_build_query($_GET) : '');
         exit;
     } else {
         $_SESSION['message'] = 'Исправьте ошибки в форме.';
         $_SESSION['form_data'] = $data;
         $_SESSION['form_errors'] = $errors;
-        header("Location: ?page=students&add=1");
+        header("Location: ?page=students&add=1" . ($_GET['search'] ? '&' . http_build_query($_GET) : ''));
         exit;
     }
 }
 
-// Обновление сотрудника
+// Обновление ученика
 if (isset($_POST['update_students'])) {
     $id = (int)$_POST['id'];
     $data = [
@@ -95,13 +95,15 @@ if (isset($_POST['update_students'])) {
     if (empty($data['fio_parent'])) $errors['fio_parent'] = 'ФИО родителя обязательно.';
     if (empty($data['phone'])) $errors['phone'] = 'Телефон обязателен.';
     if (empty($data['email'])) {
-        $errors['email'] = 'Email обязателен.';
+       $errors['email'] = 'Email обязателен.';
     } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Некорректный email.';
+       $errors['email'] = 'Некорректный email.';
     } else {
-        $stmt = $pdo->prepare("SELECT id FROM students WHERE email = ?");
-        $stmt->execute([$data['email']]);
-        if ($stmt->fetch()) $errors['email'] = 'Email уже используется.';
+      $stmt = $pdo->prepare("SELECT id FROM students WHERE email = ? AND id != ?");
+      $stmt->execute([$data['email'], $id]);
+    if ($stmt->fetch()) {
+        $errors['email'] = 'Этот email уже используется другим учеником.';
+    }
     }
     if (empty($data['waitings'])) $errors['waitings'] = 'Цель обучения обязательна.';
 
@@ -109,18 +111,18 @@ if (isset($_POST['update_students'])) {
         $pdo->prepare("UPDATE students SET fio_kids=?, years=?, classes_id=?, study_program_id=?, fio_parent=?, phone=?, email=?, waitings=? WHERE id=?")
             ->execute([$data['fio_kids'], $data['years'], $data['classes_id'], $data['study_program_id'], $data['fio_parent'], $data['phone'], $data['email'], $data['waitings'], $id]);
         $_SESSION['message'] = 'Ученик успешно обновлён.';
-        header("Location: ?page=students");
+        header("Location: ?page=students" . ($_GET['search'] ? '&' . http_build_query($_GET) : ''));
         exit;
     } else {
         $_SESSION['message'] = 'Исправьте ошибки в форме.';
         $_SESSION['form_data'] = $data;
         $_SESSION['form_errors'] = $errors;
-        header("Location: ?page=students&edit_id=$id");
+        header("Location: ?page=students&edit_id=$id" . ($_GET['search'] ? '&' . http_build_query($_GET) : ''));
         exit;
     }
 }
 
-// Удаление сотрудника
+// Удаление ученика
 if (isset($_POST['delete_students'])) {
     $id = (int)$_POST['id'];
     try {
@@ -130,7 +132,7 @@ if (isset($_POST['delete_students'])) {
     } catch (PDOException $e) {
         $_SESSION['message'] = 'Ошибка удаления: ' . $e->getMessage();
     }
-    header("Location: ?page=students");
+    header("Location: ?page=students" . ($_GET['search'] ? '&' . http_build_query($_GET) : ''));
     exit;
 }
 
@@ -145,11 +147,27 @@ $form_data = $_SESSION['form_data'] ?? [];
 unset($_SESSION['form_data']);
 $form_errors = $_SESSION['form_errors'] ?? [];
 unset($_SESSION['form_errors']);
+
+// --- Подготовка фильтров для сохранения в ссылках ---
+$filters = ['page' => 'students'];
+$allowed_filters = ['search', 'classes_id', 'study_program_id', 'sort', 'order'];
+foreach ($allowed_filters as $key) {
+    if (isset($_GET[$key])) {
+        $filters[$key] = $_GET[$key];
+    }
+}
+$filters_query = http_build_query($filters);
+
+$add_url = "?$filters_query&add=1";
+$edit_url = function($id) use ($filters_query) {
+    return "?$filters_query&edit_id=" . (int)$id;
+};
+$cancel_url = "?$filters_query";
 ?>
 
 <!-- Кнопки действий -->
 <div class="mb-4 d-flex gap-2">
-    <a href="?page=students&add=1" class="btn btn-success btn-m">Добавить ученика</a>
+    <a href="<?= $add_url ?>" class="btn btn-success btn-m">Добавить ученика</a>
     <a href="?page=group&add=1" class="btn btn-outline-primary btn-m">Добавить группу</a>
     <a href="?page=program&add=1" class="btn btn-outline-primary btn-m">Добавить программу обучения</a>
 </div>
@@ -187,7 +205,7 @@ unset($_SESSION['form_errors']);
             <?php include __DIR__ . '/forms/students_form.php'; ?>
             <div class="mt-3">
                 <button type="submit" class="btn btn-success">Сохранить</button>
-                <a href="?page=students" class="btn btn-secondary">Отмена</a>
+                <a href="<?= $cancel_url ?>" class="btn btn-secondary">Отмена</a>
             </div>
         </form>
     </div>
@@ -203,7 +221,7 @@ unset($_SESSION['form_errors']);
                    value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
         </div>
         <div class="col-md-3">
-            <select name="group_id" class="form-select">
+            <select name="classes_id" class="form-select">
                 <option value="">Все группы</option>
                 <?php
                 $group = $pdo->query("SELECT * FROM classes ORDER BY name")->fetchAll();
@@ -326,7 +344,7 @@ unset($_SESSION['form_errors']);
             foreach ($students as $s): ?>
                 <tr>
                     <td>
-                        <a href="?page=students&edit_id=<?= $s['id'] ?>" class="text-decoration-none text-primary fw-bold">
+                        <a href="<?= $edit_url($s['id']) ?>" class="text-decoration-none text-primary fw-bold">
                             <?= htmlspecialchars($s['fio_kids']) ?>
                         </a>
                     </td>
@@ -365,7 +383,7 @@ unset($_SESSION['form_errors']);
                     <?php include __DIR__ . '/forms/students_form.php'; ?>
                     <div class="mt-3">
                         <button type="submit" class="btn btn-primary">Сохранить</button>
-                        <a href="?page=students" class="btn btn-secondary">Отмена</a>
+                        <a href="<?= $cancel_url ?>" class="btn btn-secondary">Отмена</a>
                     </div>
                 </form>
 
