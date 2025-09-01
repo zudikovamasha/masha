@@ -160,7 +160,6 @@ unset($_SESSION['form_errors']);
         onclick="this.remove()"
         style="cursor: pointer;"
         role="alert">
-    </div>>
         <?= htmlspecialchars($message) ?>
     </div>
 <?php endif; ?>
