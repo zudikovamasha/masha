@@ -34,11 +34,29 @@ if (isset($_POST['create_students'])) {
         if (!$stmt->fetch()) $errors['study_program_id'] = 'Указанная программа обучения не существует.';
     }
     if (empty($data['fio_parent'])) $errors['fio_parent'] = 'ФИО родителя обязательно.';
-    if (empty($data['phone'])) $errors['phone'] = 'Телефон обязателен.';
+    if (empty($data['phone'])) {
+    $errors['phone'] = 'Телефон обязателен.';
+} else {
+    // Удаляем всё, кроме цифр
+    $digits = preg_replace('/\D/', '', $data['phone']);
+
+    // Проверяем: должно быть 11 цифр (если с 8) или 12 (если с +7)
+    if (strlen($digits) === 11 && $digits[0] === '8') {
+        // Формат: 8 + 10 цифр → преобразуем в +7 + 10 цифр
+        $data['phone'] = '+7' . substr($digits, 1);
+    } elseif (strlen($digits) === 11 && $digits[0] === '7') {
+        // Формат: +7 + 10 цифр → уже 11 цифр, начинается с 7
+        $data['phone'] = '+7' . substr($digits, 1);
+    } else {
+        $errors['phone'] = 'Телефон должен начинаться с 8 или +7 и содержать 10 цифр после.';
+    }
+}
     if (empty($data['email'])) {
         $errors['email'] = 'Email обязателен.';
     } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
         $errors['email'] = 'Некорректный email.';
+    } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $data['email'])) {
+        $errors['email'] = 'Email может содержать только латинские буквы, цифры и символы . _ + -';
     } else {
         $stmt = $pdo->prepare("SELECT id FROM students WHERE email = ?");
         $stmt->execute([$data['email']]);
@@ -50,13 +68,13 @@ if (isset($_POST['create_students'])) {
         $pdo->prepare("INSERT INTO students (fio_kids, years, classes_id, study_program_id, fio_parent, phone, email, waitings) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
             ->execute([$data['fio_kids'], $data['years'], $data['classes_id'], $data['study_program_id'], $data['fio_parent'], $data['phone'], $data['email'], $data['waitings']]);
         $_SESSION['message'] = 'Ученик успешно добавлен.';
-        header("Location: ?page=students" . ($_GET['search'] ?? '') ? '&' . http_build_query($_GET) : '');
+        header("Location: ?$filters_query");
         exit;
     } else {
         $_SESSION['message'] = 'Исправьте ошибки в форме.';
         $_SESSION['form_data'] = $data;
         $_SESSION['form_errors'] = $errors;
-        header("Location: ?page=students&add=1" . ($_GET['search'] ? '&' . http_build_query($_GET) : ''));
+        header("Location: ?$filters_query&add=1");
         exit;
     }
 }
@@ -93,11 +111,29 @@ if (isset($_POST['update_students'])) {
         if (!$stmt->fetch()) $errors['study_program_id'] = 'Указанная программа обучения не существует.';
     }
     if (empty($data['fio_parent'])) $errors['fio_parent'] = 'ФИО родителя обязательно.';
-    if (empty($data['phone'])) $errors['phone'] = 'Телефон обязателен.';
+    if (empty($data['phone'])) {
+    $errors['phone'] = 'Телефон обязателен.';
+} else {
+    // Удаляем всё, кроме цифр
+    $digits = preg_replace('/\D/', '', $data['phone']);
+
+    // Проверяем: должно быть 11 цифр (если с 8) или 12 (если с +7)
+    if (strlen($digits) === 11 && $digits[0] === '8') {
+        // Формат: 8 + 10 цифр → преобразуем в +7 + 10 цифр
+        $data['phone'] = '+7' . substr($digits, 1);
+    } elseif (strlen($digits) === 11 && $digits[0] === '7') {
+        // Формат: +7 + 10 цифр → уже 11 цифр, начинается с 7
+        $data['phone'] = '+7' . substr($digits, 1);
+    } else {
+        $errors['phone'] = 'Телефон должен начинаться с 8 или +7 и содержать 10 цифр после.';
+    }
+}
     if (empty($data['email'])) {
        $errors['email'] = 'Email обязателен.';
     } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
        $errors['email'] = 'Некорректный email.';
+    } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $data['email'])) {
+       $errors['email'] = 'Email может содержать только латинские буквы, цифры и символы . _ + -';
     } else {
       $stmt = $pdo->prepare("SELECT id FROM students WHERE email = ? AND id != ?");
       $stmt->execute([$data['email'], $id]);
@@ -111,13 +147,13 @@ if (isset($_POST['update_students'])) {
         $pdo->prepare("UPDATE students SET fio_kids=?, years=?, classes_id=?, study_program_id=?, fio_parent=?, phone=?, email=?, waitings=? WHERE id=?")
             ->execute([$data['fio_kids'], $data['years'], $data['classes_id'], $data['study_program_id'], $data['fio_parent'], $data['phone'], $data['email'], $data['waitings'], $id]);
         $_SESSION['message'] = 'Ученик успешно обновлён.';
-        header("Location: ?page=students" . ($_GET['search'] ? '&' . http_build_query($_GET) : ''));
+        header("Location: ?$filters_query");
         exit;
     } else {
         $_SESSION['message'] = 'Исправьте ошибки в форме.';
         $_SESSION['form_data'] = $data;
         $_SESSION['form_errors'] = $errors;
-        header("Location: ?page=students&edit_id=$id" . ($_GET['search'] ? '&' . http_build_query($_GET) : ''));
+        header("Location: ?$filters_query&edit_id=$id");
         exit;
     }
 }
@@ -132,7 +168,7 @@ if (isset($_POST['delete_students'])) {
     } catch (PDOException $e) {
         $_SESSION['message'] = 'Ошибка удаления: ' . $e->getMessage();
     }
-    header("Location: ?page=students" . ($_GET['search'] ? '&' . http_build_query($_GET) : ''));
+    header("Location: ?$filters_query");
     exit;
 }
 

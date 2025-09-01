@@ -79,7 +79,8 @@
     <div class="col-md-6">
         <label class="form-label">Email *</label>
         <input type="email" name="email" class="form-control <?= isset($errors['email']) ? 'is-invalid' : '' ?>"
-               value="<?= htmlspecialchars($data['email'] ?? '') ?>" required>
+               value="<?= htmlspecialchars($data['email'] ?? '') ?>"
+               placeholder="example@domain.com" required>
         <?php if (isset($errors['email'])): ?>
             <div class="invalid-feedback"><?= htmlspecialchars($errors['email']) ?></div>
         <?php endif; ?>
