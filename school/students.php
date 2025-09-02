@@ -1,7 +1,7 @@
 <?php
 require_once 'config/db.php';
 
-// --- Подготовка фильтров для сохранения в ссылках ---
+// === СНАЧАЛА: Подготовка фильтров (до обработки форм!) ===
 $filters = ['page' => 'students'];
 $allowed_filters = ['search', 'classes_id', 'study_program_id', 'sort', 'order'];
 foreach ($allowed_filters as $key) {
@@ -51,22 +51,17 @@ if (isset($_POST['create_students'])) {
     }
     if (empty($data['fio_parent'])) $errors['fio_parent'] = 'ФИО родителя обязательно.';
     if (empty($data['phone'])) {
-    $errors['phone'] = 'Телефон обязателен.';
-} else {
-    // Удаляем всё, кроме цифр
-    $digits = preg_replace('/\D/', '', $data['phone']);
-
-    // Проверяем: должно быть 11 цифр (если с 8) или 12 (если с +7)
-    if (strlen($digits) === 11 && $digits[0] === '8') {
-        // Формат: 8 + 10 цифр → преобразуем в +7 + 10 цифр
-        $data['phone'] = '+7' . substr($digits, 1);
-    } elseif (strlen($digits) === 11 && $digits[0] === '7') {
-        // Формат: +7 + 10 цифр → уже 11 цифр, начинается с 7
-        $data['phone'] = '+7' . substr($digits, 1);
+        $errors['phone'] = 'Телефон обязателен.';
     } else {
-        $errors['phone'] = 'Телефон должен начинаться с 8 или +7 и содержать 10 цифр после.';
+        $digits = preg_replace('/\D/', '', $data['phone']);
+        if (strlen($digits) === 11 && $digits[0] === '8') {
+            $data['phone'] = '+7' . substr($digits, 1);
+        } elseif (strlen($digits) === 11 && $digits[0] === '7') {
+            $data['phone'] = '+7' . substr($digits, 1);
+        } else {
+            $errors['phone'] = 'Телефон должен начинаться с 8 или +7 и содержать 10 цифр после.';
+        }
     }
-}
     if (empty($data['email'])) {
         $errors['email'] = 'Email обязателен.';
     } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
@@ -83,11 +78,11 @@ if (isset($_POST['create_students'])) {
     if (empty($errors)) {
         $pdo->prepare("INSERT INTO students (fio_kids, years, classes_id, study_program_id, fio_parent, phone, email, waitings) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
             ->execute([$data['fio_kids'], $data['years'], $data['classes_id'], $data['study_program_id'], $data['fio_parent'], $data['phone'], $data['email'], $data['waitings']]);
-        $_SESSION['message'] = 'Ученик успешно добавлен.';
+        $_SESSION['success'] = 'Ученик успешно добавлен.';
         header("Location: ?$filters_query");
         exit;
     } else {
-        $_SESSION['message'] = 'Исправьте ошибки в форме.';
+        $_SESSION['error'] = 'Не удалось добавить ученика. Исправьте ошибки ниже.';
         $_SESSION['form_data'] = $data;
         $_SESSION['form_errors'] = $errors;
         header("Location: ?$filters_query&add=1");
@@ -128,45 +123,40 @@ if (isset($_POST['update_students'])) {
     }
     if (empty($data['fio_parent'])) $errors['fio_parent'] = 'ФИО родителя обязательно.';
     if (empty($data['phone'])) {
-    $errors['phone'] = 'Телефон обязателен.';
-} else {
-    // Удаляем всё, кроме цифр
-    $digits = preg_replace('/\D/', '', $data['phone']);
-
-    // Проверяем: должно быть 11 цифр (если с 8) или 12 (если с +7)
-    if (strlen($digits) === 11 && $digits[0] === '8') {
-        // Формат: 8 + 10 цифр → преобразуем в +7 + 10 цифр
-        $data['phone'] = '+7' . substr($digits, 1);
-    } elseif (strlen($digits) === 11 && $digits[0] === '7') {
-        // Формат: +7 + 10 цифр → уже 11 цифр, начинается с 7
-        $data['phone'] = '+7' . substr($digits, 1);
+        $errors['phone'] = 'Телефон обязателен.';
     } else {
-        $errors['phone'] = 'Телефон должен начинаться с 8 или +7 и содержать 10 цифр после.';
+        $digits = preg_replace('/\D/', '', $data['phone']);
+        if (strlen($digits) === 11 && $digits[0] === '8') {
+            $data['phone'] = '+7' . substr($digits, 1);
+        } elseif (strlen($digits) === 11 && $digits[0] === '7') {
+            $data['phone'] = '+7' . substr($digits, 1);
+        } else {
+            $errors['phone'] = 'Телефон должен начинаться с 8 или +7 и содержать 10 цифр после.';
+        }
     }
-}
     if (empty($data['email'])) {
-       $errors['email'] = 'Email обязателен.';
+        $errors['email'] = 'Email обязателен.';
     } elseif (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-       $errors['email'] = 'Некорректный email.';
+        $errors['email'] = 'Некорректный email.';
     } elseif (!preg_match('/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/', $data['email'])) {
-       $errors['email'] = 'Email может содержать только латинские буквы, цифры и символы . _ + -';
+        $errors['email'] = 'Email может содержать только латинские буквы, цифры и символы . _ + -';
     } else {
-      $stmt = $pdo->prepare("SELECT id FROM students WHERE email = ? AND id != ?");
-      $stmt->execute([$data['email'], $id]);
-    if ($stmt->fetch()) {
-        $errors['email'] = 'Этот email уже используется другим учеником.';
-    }
+        $stmt = $pdo->prepare("SELECT id FROM students WHERE email = ? AND id != ?");
+        $stmt->execute([$data['email'], $id]);
+        if ($stmt->fetch()) {
+            $errors['email'] = 'Этот email уже используется другим учеником.';
+        }
     }
     if (empty($data['waitings'])) $errors['waitings'] = 'Цель обучения обязательна.';
 
     if (empty($errors)) {
         $pdo->prepare("UPDATE students SET fio_kids=?, years=?, classes_id=?, study_program_id=?, fio_parent=?, phone=?, email=?, waitings=? WHERE id=?")
             ->execute([$data['fio_kids'], $data['years'], $data['classes_id'], $data['study_program_id'], $data['fio_parent'], $data['phone'], $data['email'], $data['waitings'], $id]);
-        $_SESSION['message'] = 'Ученик успешно обновлён.';
+        $_SESSION['success'] = 'Ученик успешно обновлён.';
         header("Location: ?$filters_query");
         exit;
     } else {
-        $_SESSION['message'] = 'Исправьте ошибки в форме.';
+        $_SESSION['error'] = 'Не удалось обновить ученика. Исправьте ошибки ниже.';
         $_SESSION['form_data'] = $data;
         $_SESSION['form_errors'] = $errors;
         header("Location: ?$filters_query&edit_id=$id");
@@ -180,9 +170,9 @@ if (isset($_POST['delete_students'])) {
     try {
         $stmt = $pdo->prepare("DELETE FROM students WHERE id = ?");
         $stmt->execute([$id]);
-        $_SESSION['message'] = 'Ученик успешно удалён.';
+        $_SESSION['success'] = 'Ученик успешно удалён.';
     } catch (PDOException $e) {
-        $_SESSION['message'] = 'Ошибка удаления: ' . $e->getMessage();
+        $_SESSION['error'] = 'Ошибка удаления: ' . $e->getMessage();
     }
     header("Location: ?$filters_query");
     exit;
@@ -190,15 +180,41 @@ if (isset($_POST['delete_students'])) {
 
 // === КОНЕЦ ОБРАБОТКИ ФОРМ ===
 
-// Получаем сообщение из сессии
-$message = $_SESSION['message'] ?? '';
-unset($_SESSION['message']);
+// Получаем и очищаем сообщения
+$success = $_SESSION['success'] ?? null;
+$error = $_SESSION['error'] ?? null;
+unset($_SESSION['success'], $_SESSION['error']);
 
 // Восстанавливаем данные формы при ошибке
 $form_data = $_SESSION['form_data'] ?? [];
 unset($_SESSION['form_data']);
 $form_errors = $_SESSION['form_errors'] ?? [];
 unset($_SESSION['form_errors']);
+
+// --- Функция для сортировки ---
+function sortLink($field, $label, $current_order) {
+    $params = $_GET;
+    $params['page'] = 'students';
+    $current_sort = $_GET['sort'] ?? 'fio_kids';
+    $current_order = strtoupper($_GET['order'] ?? 'ASC');
+
+    if ($current_sort === $field) {
+        $new_order = $current_order === 'ASC' ? 'DESC' : 'ASC';
+    } else {
+        $new_order = 'ASC';
+    }
+
+    $params['sort'] = $field;
+    $params['order'] = $new_order;
+
+    $icon = '';
+    if ($current_sort === $field) {
+        $icon = $new_order === 'ASC' ? ' ↑' : ' ↓';
+    }
+
+    $url = '?' . http_build_query($params);
+    return "<a href='$url' class='btn btn-outline-secondary'>$label$icon</a>";
+}
 ?>
 
 <!-- Кнопки действий -->
@@ -208,44 +224,38 @@ unset($_SESSION['form_errors']);
     <a href="?page=program&add=1" class="btn btn-outline-primary btn-m">Добавить программу обучения</a>
 </div>
 
-<!-- Вывод уведомления -->
-<?php if ($message): ?>
-    <div class="alert <?= strpos($message, 'успешно') !== false || strpos($message, 'удалён') !== false ? 'alert-success' : 'alert-danger' ?>"
-        onclick="this.remove()"
-        style="cursor: pointer;"
-        role="alert">
-        <?= htmlspecialchars($message) ?>
+<!-- Вывод уведомлений -->
+<?php if ($success): ?>
+    <div class="alert alert-success" onclick="this.remove()" style="cursor: pointer;" role="alert">
+        <?= htmlspecialchars($success) ?>
+    </div>
+<?php endif; ?>
+
+<?php if ($error): ?>
+    <div class="alert alert-danger" onclick="this.remove()" style="cursor: pointer;" role="alert">
+        <?= htmlspecialchars($error) ?>
     </div>
 <?php endif; ?>
 
 <!-- Форма добавления -->
 <?php if (isset($_GET['add'])): ?>
-<div class="card mb-4">
-    <div class="card-header">Добавить ученика</div>
-    <div class="card-body">
-        <?php 
-        $data = [
-            'fio_kids' => $form_data['fio_kids'] ?? '',
-            'years' => $form_data['years'] ?? '',
-            'classes_id' => $form_data['classes_id'] ?? '',
-            'study_program_id' => $form_data['study_program_id'] ?? '',
-            'fio_parent' => $form_data['fio_parent'] ?? '',
-            'phone' => $form_data['phone'] ?? '',
-            'email' => $form_data['email'] ?? '',
-            'waitings' => $form_data['waitings'] ?? '',
-        ];
-        $errors = $form_errors;
-        ?>
-        <form method="post">
-            <input type="hidden" name="create_students" value="1">
-            <?php include __DIR__ . '/forms/students_form.php'; ?>
-            <div class="mt-3">
-                <button type="submit" class="btn btn-success">Сохранить</button>
-                <a href="<?= $cancel_url ?>" class="btn btn-secondary">Отмена</a>
-            </div>
-        </form>
+    <div class="card mb-4">
+        <div class="card-header">Добавить ученика</div>
+        <div class="card-body">
+            <?php
+            $data = $form_data;
+            $errors = $form_errors;
+            ?>
+            <form method="post">
+                <input type="hidden" name="create_students" value="1">
+                <?php include __DIR__ . '/forms/students_form.php'; ?>
+                <div class="mt-3">
+                    <button type="submit" class="btn btn-success">Сохранить</button>
+                    <a href="<?= $cancel_url ?>" class="btn btn-secondary">Отмена</a>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 <?php endif; ?>
 
 <!-- Фильтрация -->
@@ -289,42 +299,13 @@ unset($_SESSION['form_errors']);
 <!-- Сортировка -->
 <div class="mb-3">
     <div class="btn-group btn-group-m">
-        <?php
-        // Функция для генерации ссылки сортировки
-        function sortLink($field, $label, $current_order) {
-            $params = $_GET;
-            $params['page'] = 'students';
-            $current_sort = $_GET['sort'] ?? 'fio_kids';
-            $current_order = strtoupper($_GET['order'] ?? 'ASC');
-
-            if ($current_sort === $field) {
-                // Переключаем направление
-                $new_order = $current_order === 'ASC' ? 'DESC' : 'ASC';
-            } else {
-                // Новое поле — сортируем по возрастанию
-                $new_order = 'ASC';
-            }
-
-            $params['sort'] = $field;
-            $params['order'] = $new_order;
-
-            $icon = '';
-            if ($current_sort === $field) {
-                $icon = $new_order === 'ASC' ? ' ↑' : ' ↓';
-            }
-
-            $url = '?' . http_build_query($params);
-            return "<a href='$url' class='btn btn-outline-secondary'>$label$icon</a>";
-        }
-        ?>
         <?= sortLink('fio_kids', 'ФИО ученика', 'ASC') ?>
         <?= sortLink('years', 'Возраст', 'ASC') ?>
         <?= sortLink('created_at', 'Дата создания', 'ASC') ?>
     </div>
 </div>
 
-
-<!-- Таблица сотрудников -->
+<!-- Таблица учеников -->
 <table class="table table-striped table-hover">
     <thead>
         <tr>
@@ -403,19 +384,18 @@ unset($_SESSION['form_errors']);
     $id = (int)$_GET['edit_id'];
     $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
     $stmt->execute([$id]);
-    $students = $stmt->fetch();
+    $student = $stmt->fetch();
 
-    if ($students):
-        // Восстанавливаем данные и ошибки
-        $data = $_SESSION['form_data'] ?? $students;
-        $errors = $_SESSION['form_errors'] ?? [];
+    if ($student):
+        $data = $form_data ?: $student; // если есть данные из сессии — берём их, иначе — из БД
+        $errors = $form_errors;
     ?>
         <div class="card mt-4 border-success">
-            <div class="card-header bg-success text-light">Редактировать или удалить сотрудника</div>
+            <div class="card-header bg-success text-light">Редактировать или удалить ученика</div>
             <div class="card-body">
                 <form method="post" onsubmit="return confirm('Сохранить изменения?')">
                     <input type="hidden" name="update_students" value="1">
-                    <input type="hidden" name="id" value="<?= $students['id'] ?>">
+                    <input type="hidden" name="id" value="<?= $student['id'] ?>">
                     <?php include __DIR__ . '/forms/students_form.php'; ?>
                     <div class="mt-3">
                         <button type="submit" class="btn btn-primary">Сохранить</button>
@@ -423,14 +403,16 @@ unset($_SESSION['form_errors']);
                     </div>
                 </form>
 
-                <form method="post" onsubmit="return confirm('Удалить этого сотрудника? Это действие нельзя отменить.')">
+                <form method="post" onsubmit="return confirm('Удалить этого ученика? Это действие нельзя отменить.')">
                     <input type="hidden" name="delete_students" value="1">
-                    <input type="hidden" name="id" value="<?= $students['id'] ?>">
-                    <button type="submit" class="btn btn-danger">Удалить</button>
+                    <input type="hidden" name="id" value="<?= $student['id'] ?>">
+                    <button type="submit" class="btn btn-danger mt-2">Удалить</button>
                 </form>
             </div>
         </div>
     <?php else: ?>
-        <div id="error-alert" class="alert alert-danger alert-dismissible fade show" style="cursor: pointer;">Ученик не найден.</div>
+        <div class="alert alert-danger" style="cursor: pointer;" onclick="this.remove()">
+            Ученик не найден.
+        </div>
     <?php endif; ?>
 <?php endif; ?>
