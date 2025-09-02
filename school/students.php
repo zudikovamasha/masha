@@ -1,6 +1,22 @@
 <?php
 require_once 'config/db.php';
 
+// --- Подготовка фильтров для сохранения в ссылках ---
+$filters = ['page' => 'students'];
+$allowed_filters = ['search', 'classes_id', 'study_program_id', 'sort', 'order'];
+foreach ($allowed_filters as $key) {
+    if (isset($_GET[$key])) {
+        $filters[$key] = $_GET[$key];
+    }
+}
+$filters_query = http_build_query($filters);
+
+$add_url = "?$filters_query&add=1";
+$edit_url = function($id) use ($filters_query) {
+    return "?$filters_query&edit_id=" . (int)$id;
+};
+$cancel_url = "?$filters_query";
+
 // === ОБРАБОТКА ФОРМ — ДО ЛЮБОГО ВЫВОДА ===
 
 // Добавление ученика
@@ -183,22 +199,6 @@ $form_data = $_SESSION['form_data'] ?? [];
 unset($_SESSION['form_data']);
 $form_errors = $_SESSION['form_errors'] ?? [];
 unset($_SESSION['form_errors']);
-
-// --- Подготовка фильтров для сохранения в ссылках ---
-$filters = ['page' => 'students'];
-$allowed_filters = ['search', 'classes_id', 'study_program_id', 'sort', 'order'];
-foreach ($allowed_filters as $key) {
-    if (isset($_GET[$key])) {
-        $filters[$key] = $_GET[$key];
-    }
-}
-$filters_query = http_build_query($filters);
-
-$add_url = "?$filters_query&add=1";
-$edit_url = function($id) use ($filters_query) {
-    return "?$filters_query&edit_id=" . (int)$id;
-};
-$cancel_url = "?$filters_query";
 ?>
 
 <!-- Кнопки действий -->
