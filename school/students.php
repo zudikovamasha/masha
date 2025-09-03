@@ -95,8 +95,30 @@ if (isset($_POST['create_students'])) {
     }
 }
 
-// Обновление ученика
-if (isset($_POST['update_students'])) {
+// === ЕДИНАЯ ОБРАБОТКА ДЛЯ РЕДАКТИРОВАНИЯ И УДАЛЕНИЯ ===
+if (isset($_POST['action'])) {
+    $id = (int)($_POST['id'] ?? 0);
+    if ($id <= 0) {
+        $_SESSION['error'] = 'Некорректный ID ученика.';
+        header("Location: ?$filters_query");
+        exit;
+    }
+
+    if ($_POST['action'] === 'delete') {
+        // Удаление
+        try {
+            $stmt = $pdo->prepare("DELETE FROM students WHERE id = ?");
+            $stmt->execute([$id]);
+            $_SESSION['success'] = 'Ученик успешно удалён.';
+        } catch (PDOException $e) {
+            $_SESSION['error'] = 'Ошибка удаления: ' . $e->getMessage();
+        }
+        header("Location: ?$filters_query");
+        exit;
+    }
+
+    // Обновление ученика
+    elseif ($_POST['action'] === 'update') {
     $id = (int)$_POST['id'];
     $data = [
         'fio_kids' => trim($_POST['fio_kids'] ?? ''),
@@ -172,21 +194,7 @@ if (isset($_POST['update_students'])) {
         header("Location: ?$filters_query&edit_id=$id");
         exit;
     }
-}
-
-// Удаление ученика
-if (isset($_POST['delete_students'])) {
-    $id = (int)$_POST['id'];
-    try {
-        $stmt = $pdo->prepare("DELETE FROM students WHERE id = ?");
-        $stmt->execute([$id]);
-        $_SESSION['success'] = 'Ученик успешно удалён.';
-    } catch (PDOException $e) {
-        $_SESSION['error'] = 'Ошибка удаления: ' . $e->getMessage();
-    }
-    header("Location: ?$filters_query");
-    exit;
-}
+    }}
 
 // === КОНЕЦ ОБРАБОТКИ ФОРМ ===
 
@@ -415,22 +423,22 @@ unset($_SESSION['form_errors']);
         $errors = $_SESSION['form_errors'] ?? [];
     ?>
         <div class="card mt-4 border-success">
-            <div class="card-header bg-success text-light">Редактировать или удалить сотрудника</div>
+            <div class="card-header bg-success text-light">Редактировать или удалить ученика</div>
             <div class="card-body">
-                <form method="post" onsubmit="return confirm('Сохранить изменения?')">
-                    <input type="hidden" name="update_students" value="1">
-                    <input type="hidden" name="id" value="<?= $students['id'] ?>">
-                    <?php include __DIR__ . '/forms/students_form.php'; ?>
-                    <div class="mt-3">
-                        <button type="submit" class="btn btn-primary">Сохранить</button>
-                        <a href="<?= $cancel_url ?>" class="btn btn-secondary">Отмена</a>
-                    </div>
-                </form>
+                <form method="post" id="student-form">
+                <input type="hidden" name="id" value="<?= $students['id'] ?>">
 
-                <form method="post" onsubmit="return confirm('Удалить этого сотрудника? Это действие нельзя отменить.')">
-                    <input type="hidden" name="delete_students" value="1">
-                    <input type="hidden" name="id" value="<?= $students['id'] ?>">
-                    <button type="submit" class="btn btn-danger mt-1">Удалить</button>
+                <!-- Поля формы -->
+                <?php include __DIR__ . '/forms/students_form.php'; ?>
+
+                <!-- Кнопки: каждая с уникальным name -->
+                <div class="mt-3 d-flex flex-wrap gap-2">
+                    <button type="submit" name="action" value="update" class="btn btn-primary">Сохранить</button>
+                    <a href="<?= $cancel_url ?>" class="btn btn-secondary">Отмена</a>
+                    <button type="submit" name="action" value="delete" class="btn btn-danger"
+                    onclick="return confirm('Удалить этого ученика? Это действие нельзя отменить.');">Удалить
+                    </button>
+                </div>
                 </form>
             </div>
         </div>
