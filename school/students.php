@@ -103,7 +103,6 @@ if (isset($_POST['action'])) {
         header("Location: ?$filters_query");
         exit;
     }
-
     if ($_POST['action'] === 'delete') {
         // Удаление
         try {
@@ -205,9 +204,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 
 // Восстанавливаем данные формы при ошибке
 $form_data = $_SESSION['form_data'] ?? [];
-unset($_SESSION['form_data']);
 $form_errors = $_SESSION['form_errors'] ?? [];
-unset($_SESSION['form_errors']);
 ?>
 
 <!-- Кнопки действий -->
@@ -247,6 +244,8 @@ unset($_SESSION['form_errors']);
             'waitings' => $form_data['waitings'] ?? '',
         ];
         $errors = $form_errors;
+        // Очищаем сессию ТОЛЬКО после того, как взяли данные
+        unset($_SESSION['form_data'], $_SESSION['form_errors']);
         ?>
         <form method="post">
             <input type="hidden" name="create_students" value="1">
@@ -419,21 +418,23 @@ unset($_SESSION['form_errors']);
 
     if ($students):
         // Восстанавливаем данные и ошибки
-        $data = $_SESSION['form_data'] ?? $students;
-        $errors = $_SESSION['form_errors'] ?? [];
+        // Используем данные из сессии при ошибках, иначе — из БД
+        $data = $form_data ?: $students;  // если есть form_data — используем его
+        $errors = $form_errors;
+        // Очищаем сессию ТОЛЬКО после того, как взяли данные
+        unset($_SESSION['form_data'], $_SESSION['form_errors']);
     ?>
         <div class="card mt-4 border-success">
             <div class="card-header bg-success text-light">Редактировать или удалить ученика</div>
             <div class="card-body">
                 <form method="post" id="student-form">
                 <input type="hidden" name="id" value="<?= $students['id'] ?>">
-
                 <!-- Поля формы -->
                 <?php include __DIR__ . '/forms/students_form.php'; ?>
-
                 <!-- Кнопки: каждая с уникальным name -->
                 <div class="mt-3 d-flex flex-wrap gap-2">
-                    <button type="submit" name="action" value="update" class="btn btn-primary">Сохранить</button>
+                    <button type="submit" name="action" value="update" class="btn btn-primary"
+                    onclick="return confirm('Сохранить изменения?')">Сохранить</button>
                     <a href="<?= $cancel_url ?>" class="btn btn-secondary">Отмена</a>
                     <button type="submit" name="action" value="delete" class="btn btn-danger"
                     onclick="return confirm('Удалить этого ученика? Это действие нельзя отменить.');">Удалить
